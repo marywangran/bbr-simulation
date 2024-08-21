@@ -110,8 +110,9 @@ void bbr_update_sending_bw(struct bbr_flow *f)
 }
 
 
-void simulate_one_phase(void)
+void simulate_one_phase(int i)
 {
+  double rtt;
   bbr_update_sending_bw(&f1);
   bbr_update_sending_bw(&f2);
   bbr_update_sending_bw(&f3);
@@ -120,15 +121,39 @@ void simulate_one_phase(void)
   printf("t= %04d sending: f1: %.3f f2: %.3f f3: %.3f f4: %.3f\n",
          t, f1.sending_bw, f2.sending_bw, f3.sending_bw, f4.sending_bw);
 
-  f1.receive_bw = C * f1.inflt / (f1.inflt + f2.inflt + f3.inflt + f4.inflt);
-  f2.receive_bw = C * f2.inflt / (f1.inflt + f2.inflt + f3.inflt + f4.inflt);
-  f3.receive_bw = C * f3.inflt / (f1.inflt + f2.inflt + f3.inflt + f4.inflt);
-  f4.receive_bw = C * f4.inflt / (f1.inflt + f2.inflt + f3.inflt + f4.inflt);
+  if (i < 1000) {
+    rtt = (f1.inflt + f2.inflt + f3.inflt) / C;
+    f1.receive_bw = C * f1.inflt / (f1.inflt + f2.inflt + f3.inflt);
+    f2.receive_bw = C * f2.inflt / (f1.inflt + f2.inflt + f3.inflt);
+    f3.receive_bw = C * f3.inflt / (f1.inflt + f2.inflt + f3.inflt);
+    f4.receive_bw = 1;
+    f4.max_bw = 1;
+    f4.inflt = 1;
+    if (i == 999) {
+      f4.max_bw = 0.9 * C;
+      f4.inflt = 0.9 * C * RTPROP;
+    }
+  } else if (i > 1000 && i < 2000) {
+    rtt = (f1.inflt + f2.inflt + f3.inflt + f4.inflt) / C;
+    f1.receive_bw = C * f1.inflt / (f1.inflt + f2.inflt + f3.inflt + f4.inflt);
+    f2.receive_bw = C * f2.inflt / (f1.inflt + f2.inflt + f3.inflt + f4.inflt);
+    f3.receive_bw = C * f3.inflt / (f1.inflt + f2.inflt + f3.inflt + f4.inflt);
+    f4.receive_bw = C * f4.inflt / (f1.inflt + f2.inflt + f3.inflt + f4.inflt);
+  } else {
+    rtt = (f1.inflt + f2.inflt) / C;
+    f1.receive_bw = C * f1.inflt / (f1.inflt + f2.inflt);
+    f2.receive_bw = C * f2.inflt / (f1.inflt + f2.inflt);
+    f3.receive_bw = 0;
+    f4.receive_bw = 0;
+    f3.max_bw = 0;
+    f4.max_bw = 0;
+    f3.inflt = 0;
+    f4.inflt = 0;
+  }
 
   printf("t= %04d receive: f1: %.3f f2: %.3f f3: %.3f f4: %.3f\n",
          t, f1.receive_bw, f2.receive_bw, f3.receive_bw, f4.receive_bw);
 
-  double rtt = (f1.inflt + f2.inflt + f3.inflt + f4.inflt) / C;
   bbr_update_maxbw_minrtt(&f1, rtt);
   bbr_update_maxbw_minrtt(&f2, rtt);
   bbr_update_maxbw_minrtt(&f3, rtt);
@@ -147,8 +172,7 @@ void simulate_one_phase(void)
   bw_filter_index = (bw_filter_index + 1) % BW_FILTER_LEN;
 }
 
-int main(int argc, char *argv[]) 
-{
+int main(int argc, char *argv[]) {
   int i = 0;
 
   f1.index = 1;
@@ -159,7 +183,6 @@ int main(int argc, char *argv[])
   f1.max_bw = 0.1 * C;
   f2.max_bw = 0.5 * C;
   f3.max_bw = 0.4 * C;
-  f4.max_bw = 0.9 * C;
 
   f1.min_rtt = 1;
   f2.min_rtt = 1;
@@ -169,7 +192,6 @@ int main(int argc, char *argv[])
   f1.inflt = 0.1 * C * RTPROP;
   f2.inflt = 0.5 * C * RTPROP;
   f3.inflt = 0.4 * C * RTPROP;
-  f4.inflt = 0.9 * C * RTPROP;
 
   f1.status = PROBEBW;
   f2.status = PROBEBW;
@@ -186,8 +208,8 @@ int main(int argc, char *argv[])
   f3.phase_offset = 4;
   f4.phase_offset = 6;
 
-  for (i = 0; i < 500 /*5000*/; i++) {
-    simulate_one_phase();
+  for (i = 0; i < 3000; i++) {
+    simulate_one_phase(i);
   }
 
   return 0;
