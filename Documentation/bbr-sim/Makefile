@@ -1,5 +1,5 @@
-bbr_additive: bbr_addtive.c
-	gcc -Wall -o bbr_additive bbr_addtive.c
+bbr_additive: bbr_additive.c
+	gcc -Wall -o bbr_additive bbr_additive.c
 bbr_multi: bbr_multi.c
 	gcc -Wall -o bbr_multi bbr_multi.c
 ebest.: ebest.c
